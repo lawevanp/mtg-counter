@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>MTG Life Counter</title>
+  <meta name="description" content="Simple life and creature counter tracker for Magic: The Gathering">
+  <meta name="theme-color" content="#16161d">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Life Counter">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Life Counter</h1>
+    <div class="topbar-actions">
+      <button id="installBtn" class="btn small" hidden>Install</button>
+      <button id="wakeBtn" class="btn small" title="Keep the screen on">Screen on: off</button>
+      <button id="newGameBtn" class="btn small danger">New game</button>
+    </div>
+  </header>
+
+  <main>
+    <details class="panel settings">
+      <summary>Game settings</summary>
+      <div class="settings-grid">
+        <label>Starting life
+          <select id="startingLife">
+            <option value="40" selected>40 (Commander)</option>
+            <option value="30">30 (Brawl)</option>
+            <option value="25">25</option>
+            <option value="20">20 (Standard)</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </label>
+      </div>
+      <button id="firstPlayerBtn" class="btn wide">Pick who goes first</button>
+    </details>
+
+    <section aria-labelledby="playersHeading">
+      <h2 id="playersHeading" class="section-title">Players</h2>
+      <div id="players" class="players"></div>
+      <button id="addPlayerBtn" class="btn wide">+ Add player</button>
+    </section>
+
+    <section aria-labelledby="creaturesHeading">
+      <div class="section-head">
+        <h2 id="creaturesHeading" class="section-title">Creatures</h2>
+        <button id="clearEotBtn" class="btn small" title="Remove all until-end-of-turn pumps">End turn (clear pumps)</button>
+      </div>
+
+      <form id="addCreatureForm" class="panel add-form" autocomplete="off">
+        <div class="name-field">
+          <label for="cName">Card name</label>
+          <input id="cName" type="text" placeholder="Start typing to search cards…" autocapitalize="words" required>
+          <ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
+        </div>
+        <div id="lookupStatus" class="lookup-status" aria-live="polite"></div>
+        <div id="cardPreview" class="card-preview" hidden></div>
+        <div class="add-row">
+          <label>Power <input id="cPower" type="text" inputmode="numeric" placeholder="2"></label>
+          <label>Toughness <input id="cTough" type="text" inputmode="numeric" placeholder="2"></label>
+          <label>Copies <input id="cQty" type="number" inputmode="numeric" min="1" max="50" value="1"></label>
+        </div>
+        <label>Controller <select id="cOwner"></select></label>
+        <button type="submit" class="btn primary wide">Add creature</button>
+      </form>
+
+      <div id="creatures"></div>
+    </section>
+  </main>
+
+  <dialog id="cardDialog" class="card-dialog">
+    <form method="dialog"><button class="btn small close" aria-label="Close">Close</button></form>
+    <div id="cardDialogBody"></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
