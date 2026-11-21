@@ -1,6 +1,6 @@
 // Service worker: makes the app work offline and installable.
 // Bump CACHE_VERSION whenever you change app files so phones pick up the update.
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const APP_CACHE = `mtg-life-app-${CACHE_VERSION}`;
 const IMG_CACHE = 'mtg-life-card-images';
 

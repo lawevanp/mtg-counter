@@ -138,6 +138,29 @@ label > input, label > select { margin-top: 4px; color: var(--text); }
 .btn.lose { color: var(--bad); }
 .btn.gain { color: var(--good); }
 
+/* Commander tax & damage */
+.commander { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 8px; }
+.commander summary {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  cursor: pointer; font-weight: 600; font-size: 0.9rem; color: var(--muted); padding: 4px 0;
+}
+.cmd-summary { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.cmd-summary.lethal { color: var(--bad); }
+.tax-row, .cmd-row { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 6px; }
+.tax-row { margin: 8px 0 12px; }
+.tax-label { font-weight: 600; }
+.tax-sub { font-size: 0.75rem; color: var(--muted); }
+.tax-val, .cmd-row .val { min-width: 2.2em; text-align: center; font-weight: 800; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.tax-row .btn, .cmd-row .btn { padding: 6px 12px; }
+.cmd-head { font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
+.cmd-head small { font-size: 0.7rem; }
+.cmd-row { padding: 3px 0; }
+.cmd-from { display: flex; align-items: center; gap: 6px; overflow: hidden; }
+.cmd-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmd-from .dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--ocolor); }
+.cmd-row.lethal .val { color: var(--bad); }
+.cmd-none { font-size: 0.8rem; color: var(--muted); }
+
 /* ---------- Add creature form ---------- */
 .add-form { display: grid; gap: 10px; }
 .add-form .btn.wide { margin-top: 2px; }

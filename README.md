@@ -7,7 +7,8 @@ just static files. Works offline once installed.
 - Life totals: big −/+ buttons, −5/−10/+5/+10, or type any amount and tap **Lose**/**Gain**
   (pressing Enter in the amount box counts as Lose)
 - Running "−6" style indicator so you can see the total of a quick series of taps
-- Poison counters (player is greyed out at 0 life or 10 poison)
+- Poison counters (player is greyed out at 0 life, 10 poison, or 21 commander damage)
+- Commander tax (tap "+ Cast" each time you cast from the command zone) and commander damage from each opponent, which also lowers life
 - 1–6 players, starting life 20 / 25 / 30 / 40 / custom, random "who goes first"
 - Creatures: card search with autocomplete (Scryfall) that fills in power/toughness and art,
   or type any name + stats manually (good for tokens)
