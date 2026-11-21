@@ -4,6 +4,7 @@
    MTG Life Counter
    - Life totals with quick +/- buttons or a typed amount
    - Poison counters
+   - Commander tax and commander damage (21 from one commander is lethal)
    - Creatures with +1/+1, -1/-1, end-of-turn pumps and custom counters
    - Optional card lookup via the free Scryfall API
    - Everything is saved in localStorage so a refresh keeps the game
@@ -33,7 +34,7 @@ function makePlayer(life, existing = []) {
   while (names.has(`Player ${n}`)) n++;
   const used = new Set(existing.map((p) => p.color));
   const color = COLORS.find((c) => !used.has(c)) || COLORS[existing.length % COLORS.length];
-  return { id: uid(), name: `Player ${n}`, life, poison: 0, color };
+  return { id: uid(), name: `Player ${n}`, life, poison: 0, color, casts: 0, cmdDmg: {} };
 }
 
 function newState(count = 2, life = 40) {
@@ -49,6 +50,11 @@ function load() {
     const s = JSON.parse(raw);
     if (!Array.isArray(s.players) || !s.players.length) return null;
     s.creatures = Array.isArray(s.creatures) ? s.creatures : [];
+    // Games saved before commander tracking existed
+    s.players.forEach((p) => {
+      p.casts = Number(p.casts) || 0;
+      p.cmdDmg = p.cmdDmg && typeof p.cmdDmg === 'object' ? p.cmdDmg : {};
+    });
     return s;
   } catch {
     return null;
@@ -78,6 +84,36 @@ function toast(msg, ms = 2200) {
 /* ---------------- Players ---------------- */
 
 const deltas = {}; // pid -> { value, timer } for the "+3" indicator
+const openCommander = new Set(); // pids whose Commander panel is expanded
+const CMD_LETHAL = 21;
+
+const maxCmdDmg = (p) => Math.max(0, ...state.players.filter((o) => o !== p).map((o) => p.cmdDmg[o.id] || 0));
+
+function commanderPanel(p) {
+  const opponents = state.players.filter((o) => o !== p);
+  const rows = opponents.map((o) => `
+        <div class="cmd-row" data-from="${o.id}" style="--ocolor:${o.color}">
+          <span class="cmd-from"><span class="dot"></span><span class="cmd-name">${esc(o.name)}</span></span>
+          <button class="btn" data-action="cmdDmg" data-from="${o.id}" data-amt="-1" aria-label="Remove 1 commander damage from ${esc(o.name)}">−</button>
+          <span class="val">0</span>
+          <button class="btn" data-action="cmdDmg" data-from="${o.id}" data-amt="1" aria-label="Add 1 commander damage from ${esc(o.name)}">+</button>
+        </div>`).join('');
+  return `
+      <details class="commander" ${openCommander.has(p.id) ? 'open' : ''}>
+        <summary><span>Commander</span><span class="cmd-summary"></span></summary>
+        <div class="tax-row">
+          <div>
+            <div class="tax-label">Commander tax</div>
+            <div class="tax-sub"></div>
+          </div>
+          <button class="btn" data-action="cast" data-amt="-1" aria-label="Undo a commander cast">−</button>
+          <span class="tax-val">+0</span>
+          <button class="btn" data-action="cast" data-amt="1" aria-label="Cast commander from the command zone">+ Cast</button>
+        </div>
+        <div class="cmd-head">Commander damage taken <small>(also changes life)</small></div>
+        ${rows || '<div class="cmd-none">Add another player to track commander damage.</div>'}
+      </details>`;
+}
 
 function renderPlayers() {
   $('#players').innerHTML = state.players.map((p) => `
@@ -114,6 +150,7 @@ function renderPlayers() {
         <button class="btn lose" data-action="custom" data-sign="-1">Lose</button>
         <button class="btn gain" data-action="custom" data-sign="1">Gain</button>
       </div>
+      ${commanderPanel(p)}
     </article>
   `).join('');
   state.players.forEach(updatePlayer);
@@ -125,7 +162,26 @@ function updatePlayer(p) {
   el.querySelector('.life-num').textContent = p.life;
   el.querySelector('.poison .count').textContent = p.poison;
   el.querySelector('.poison').classList.toggle('lethal', p.poison >= 10);
-  el.classList.toggle('dead', p.life <= 0 || p.poison >= 10);
+
+  const tax = p.casts * 2;
+  el.querySelector('.tax-val').textContent = `+${tax}`;
+  el.querySelector('.tax-sub').textContent = p.casts
+    ? `Cast ${p.casts} time${p.casts === 1 ? '' : 's'} from command zone`
+    : 'Not cast yet';
+  el.querySelectorAll('.cmd-row').forEach((row) => {
+    const n = p.cmdDmg[row.dataset.from] || 0;
+    row.querySelector('.val').textContent = n;
+    row.classList.toggle('lethal', n >= CMD_LETHAL);
+  });
+  const top = maxCmdDmg(p);
+  const bits = [];
+  if (tax) bits.push(`tax +${tax}`);
+  if (top) bits.push(`${top}/${CMD_LETHAL} dmg`);
+  const sum = el.querySelector('.cmd-summary');
+  sum.textContent = bits.join(' · ');
+  sum.classList.toggle('lethal', top >= CMD_LETHAL);
+
+  el.classList.toggle('dead', p.life <= 0 || p.poison >= 10 || top >= CMD_LETHAL);
 }
 
 function changeLife(p, amt) {
@@ -165,12 +221,27 @@ $('#players').addEventListener('click', (e) => {
       save();
       updatePlayer(p);
       break;
+    case 'cast':
+      p.casts = Math.max(0, p.casts + Number(btn.dataset.amt));
+      save();
+      updatePlayer(p);
+      break;
+    case 'cmdDmg': {
+      const from = btn.dataset.from;
+      const cur = p.cmdDmg[from] || 0;
+      const next = Math.max(0, cur + Number(btn.dataset.amt));
+      if (next === cur) return;
+      p.cmdDmg[from] = next;
+      changeLife(p, cur - next); // commander damage is real damage; undoing it gives the life back
+      break;
+    }
     case 'removePlayer': {
       if (state.players.length <= 1) return;
       const owned = state.creatures.filter((c) => c.owner === p.id).length;
       const extra = owned ? ` Their ${owned} creature${owned === 1 ? '' : 's'} will be removed too.` : '';
       if (!confirm(`Remove ${p.name}?${extra}`)) return;
       state.players = state.players.filter((x) => x !== p);
+      state.players.forEach((x) => { delete x.cmdDmg[p.id]; });
       state.creatures = state.creatures.filter((c) => c.owner !== p.id);
       save();
       renderAll();
@@ -193,7 +264,16 @@ $('#players').addEventListener('input', (e) => {
   const p = playerById(e.target.closest('.player').dataset.pid);
   p.name = e.target.value;
   save();
+  // Keep the opponent labels in other players' commander damage lists in sync
+  document.querySelectorAll(`.cmd-row[data-from="${p.id}"] .cmd-name`).forEach((n) => { n.textContent = p.name; });
 });
+
+// Remember which Commander panels are open so re-renders don't collapse them
+$('#players').addEventListener('toggle', (e) => {
+  if (!e.target.matches('details.commander')) return;
+  const pid = e.target.closest('.player').dataset.pid;
+  if (e.target.open) openCommander.add(pid); else openCommander.delete(pid);
+}, true);
 
 $('#players').addEventListener('change', (e) => {
   if (e.target.dataset.field !== 'name') return;
@@ -258,8 +338,8 @@ $('#startingLife').addEventListener('change', (e) => {
 });
 
 $('#newGameBtn').addEventListener('click', () => {
-  if (!confirm('Start a new game? Life totals reset and all creatures are removed.')) return;
-  state.players.forEach((p) => { p.life = state.startingLife; p.poison = 0; });
+  if (!confirm('Start a new game? Life, poison, commander tax and damage reset, and all creatures are removed.')) return;
+  state.players.forEach((p) => { p.life = state.startingLife; p.poison = 0; p.casts = 0; p.cmdDmg = {}; });
   state.creatures = [];
   save();
   renderAll();
